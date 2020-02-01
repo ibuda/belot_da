@@ -1,17 +1,12 @@
-import sys
+import os
 import logging
 import logging.config
 
+PROJ_FOLDER = os.path.dirname(os.path.abspath(__file__))
+
 
 def logger(name):
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-        LOGGER.error("Uncaught exception", exc_info=(
-            exc_type, exc_value, exc_traceback))
-
-    LOGGER = logging.getLogger(name)
-    sys.excepthook = handle_exception
+    log_path = f'{PROJ_FOLDER}/logger.conf'
+    logging.config.fileConfig(log_path)
 
     return logging.getLogger(name)
