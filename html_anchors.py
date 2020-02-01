@@ -4,4 +4,7 @@ text that is related to useful information needed to
 be parsed. 
 """
 
-PLAYER_NAME_STYLE = 'border-bottom:1px solid;color:lightgray'
+PLAYER_NAME_CLASS = 'plrd'
+GAME_FINISHED_CLASS = 'finished'
+GAME_DURATION_CLASS = 'duration'
+TOTAL_POINTS_CLASS = 'total_points'
