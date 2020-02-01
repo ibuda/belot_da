@@ -11,7 +11,8 @@ from html_anchors import (
     PLAYER_NAME_CLASS,
     GAME_FINISHED_CLASS,
     GAME_DURATION_CLASS,
-    TOTAL_POINTS_CLASS
+    TOTAL_POINTS_CLASS,
+    FOUR_PLAYERS_CLASS
 )
 from urls import(
     URL_GAME_REPLAY,
@@ -84,9 +85,17 @@ def get_game_info_data(text: str) -> dict:
 
     # get all players points
     points = []
-    tags = bs.find_all(attrs={'class': TOTAL_POINTS_CLASS})
-    for tag in tags:  # first one is logged in user
-        points.append(tag.getText())
+    if len(names) == 4:  # special case when there are 4 players
+        tags = bs.find_all(attrs={'class': FOUR_PLAYERS_CLASS})
+        for tag in tags:
+            inner_tags = tag.find_all('b')
+            for inner_tag in inner_tags:
+                points.append(inner_tag.getText())
+
+    else:
+        tags = bs.find_all(attrs={'class': TOTAL_POINTS_CLASS})
+        for tag in tags:  # first one is logged in user
+            points.append(tag.getText())
     points = [point.split()[0] for point in points]
     data['points'] = points
 
