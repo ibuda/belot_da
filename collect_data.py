@@ -20,9 +20,10 @@ from urls import(
 )
 
 PROJ_FOLDER = os.path.dirname(os.path.abspath(__file__))
-LOGGER = logger('get_data')
+LOGGER = logger('crawler')
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
-with open(PROJ_FOLDER + '/assets/config.json', 'r') as f:
+CONFIG_PATH = PROJ_FOLDER + '/assets/config.json'
+with open(CONFIG_PATH, 'r') as f:
     CONFIG = json.load(f)
 
 
@@ -113,7 +114,7 @@ def get_game_data(id: int) -> dict:
         session
     )
 
-    data = {}
+    data = {'id': id}
 
     # getting score and moves from game replay
     data.update(get_game_replay_data(html_content))
@@ -149,11 +150,62 @@ def get_session(config: dict = CONFIG):
     return session
 
 
-if __name__ == "__main__":
-    id = 16080002
-    ress = []
-    for i in range(id, id + 15):
-        ress.append(get_game_data(i))
+def save_batch_data(data):
+    id_start = data[0]['id']
+    id_end = data[-1]['id']
+    filename = f"{PROJ_FOLDER}/data/{id_start}_{id_end}.json"
+    with open(filename, 'w') as f:
+        json.dump(data, f)
+    LOGGER.info(f'saved data in {filename}')
+
+
+def update_config(data):
+    with open(CONFIG_PATH, 'r') as f:
+        config = json.load(f)
+    config.update(data)
+    with open(CONFIG_PATH, 'w') as f:
+        json.dump(config, f)
+
+
+def crawl_batch(id_start: int, batch_size: int = 5) -> bool:
+    # runs crawler for ids between from id_start to + batch_size
+    # returns False if no data is crawled, True otherwise
+    LOGGER.info(f"crawler batch for {id_start} started")
+    data = []
+    for i in range(id_start, id_start + batch_size):
+        data.append(get_game_data(i))
+        # a very lame imitation of user behavior
+        # trying to be "polite" to server actually
         time.sleep(random.randint(100, 300) / 100)
-    with open('data/result.json', 'w') as fp:
-        json.dump(ress, fp)
+
+    # safe check
+    if len(data) == 0 or 'players' not in data[0]:
+        LOGGER.info(f'No data received in crawl_batch for id = {id_start}')
+        return False
+
+    # saving data
+    save_batch_data(data)
+
+    # updating last processed game id in config file
+
+    update_data = {"last_processed_game_id": data[-1]['id']}
+    update_config(update_data)
+
+    return True
+
+
+def run_crawler(n_iterations: int, batch_size: int = 1000):
+    # runs crawl_batch n_iterations times
+    ix = CONFIG['last_processed_game_id']
+    LOGGER.info(f'starting crawler with id_start = {ix}')
+    for _ in range(n_iterations):
+        crawl_batch(ix, batch_size=batch_size)
+        ix += batch_size
+        # sleeping for 3-5 seconds, trying to be polite
+        time.sleep(random.randint(300, 500) / 100)
+
+    LOGGER.info('crawler successfully finished')
+
+
+if __name__ == "__main__":
+    run_crawler(2, batch_size=10)
