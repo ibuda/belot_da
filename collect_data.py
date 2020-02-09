@@ -4,6 +4,7 @@ import json
 from bs4 import BeautifulSoup
 from logger import logger
 from datetime import datetime
+from tqdm import tqdm
 import random
 import time
 
@@ -103,9 +104,9 @@ def get_game_info_data(text: str) -> dict:
     return data
 
 
-def get_game_data(id: int) -> dict:
+def get_game_data(id: int, session) -> dict:
     # returns information for game with id=id
-    session = get_session()
+    # LOGGER.info(f'getting data for game {id}')
 
     # getting data form game replay page
     html_content = get_html_content(
@@ -172,8 +173,9 @@ def crawl_batch(id_start: int, batch_size: int = 5) -> bool:
     # returns False if no data is crawled, True otherwise
     LOGGER.info(f"crawler batch for {id_start} started")
     data = []
-    for i in range(id_start, id_start + batch_size):
-        data.append(get_game_data(i))
+    session = get_session()
+    for i in tqdm(range(id_start, id_start + batch_size)):
+        data.append(get_game_data(i, session))
         # a very lame imitation of user behavior
         # trying to be "polite" to server actually
         time.sleep(random.randint(100, 300) / 100)
@@ -198,7 +200,8 @@ def run_crawler(n_iterations: int, batch_size: int = 1000):
     # runs crawl_batch n_iterations times
     ix = CONFIG['last_processed_game_id']
     LOGGER.info(f'starting crawler with id_start = {ix}')
-    for _ in range(n_iterations):
+    for i in range(n_iterations):
+        LOGGER.info(f'running crawler iteration # {i + 1}/{n_iterations}')
         crawl_batch(ix, batch_size=batch_size)
         ix += batch_size
         # sleeping for 3-5 seconds, trying to be polite
@@ -208,4 +211,4 @@ def run_crawler(n_iterations: int, batch_size: int = 1000):
 
 
 if __name__ == "__main__":
-    run_crawler(2, batch_size=10)
+    run_crawler(200, batch_size=1000)
