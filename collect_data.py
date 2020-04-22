@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 import json
 from bs4 import BeautifulSoup
@@ -67,7 +68,15 @@ def get_game_info_data(text: str) -> dict:
     # getting game date
     bs = BeautifulSoup(text, "html.parser")
     tags = bs.find_all(attrs={'class': GAME_FINISHED_CLASS})
-    data['game_date'] = tags[0].find('b').getText()
+    try:
+        data['game_date'] = tags[0].find('b').getText()
+    except Exception as e:
+        LOGGER.error('Exception caught: ')
+        LOGGER.error(str(e))
+        with open('data/error.html', 'w') as html_file:
+            html_file.write(text)
+        LOGGER.error('saved html file to data/error.html')
+        sys.exit(1)
     # getting game winner
     winner_text = tags[1].getText().replace('\n', '')
     # winner = winner[25:]
@@ -178,7 +187,7 @@ def crawl_batch(id_start: int, batch_size: int = 5) -> bool:
         data.append(get_game_data(i, session))
         # a very lame imitation of user behavior
         # trying to be "polite" to server actually
-        time.sleep(random.randint(100, 300) / 100)
+        time.sleep(random.randint(100, 300) / 1000)
 
     # safe check
     if len(data) == 0 or 'players' not in data[0]:
@@ -205,7 +214,7 @@ def run_crawler(n_iterations: int, batch_size: int = 1000):
         crawl_batch(ix, batch_size=batch_size)
         ix += batch_size
         # sleeping for 3-5 seconds, trying to be polite
-        time.sleep(random.randint(300, 500) / 100)
+        time.sleep(random.randint(300, 500) / 1000)
 
     LOGGER.info('crawler successfully finished')
 
