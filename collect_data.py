@@ -71,11 +71,18 @@ def get_game_info_data(text: str) -> dict:
     try:
         data['game_date'] = tags[0].find('b').getText()
     except Exception as e:
+        # checking if the game does not exist
+        if 'nu a fost gasit' in text:
+            return data
+        elif '502 Bad Gateway' in text or 'Connect failed:' in text:
+            return {'error': 502}
+        # other unknown exceptions
         LOGGER.error('Exception caught: ')
         LOGGER.error(str(e))
-        with open('data/error.html', 'w') as html_file:
+        with open('assets/error.html', 'w') as html_file:
             html_file.write(text)
-        LOGGER.error('saved html file to data/error.html')
+        LOGGER.error('saved html file to error/error.html')
+
         sys.exit(1)
     # getting game winner
     winner_text = tags[1].getText().replace('\n', '')
@@ -184,7 +191,16 @@ def crawl_batch(id_start: int, batch_size: int = 5) -> bool:
     data = []
     session = get_session()
     for i in tqdm(range(id_start, id_start + batch_size)):
-        data.append(get_game_data(i, session))
+        game_data = get_game_data(i, session)
+        error = game_data.get('error', 0)
+        if error == 502:
+            # bad gateway error received, sleeping
+            LOGGER.info('Bad Gateway message received, sleeping for 5 min')
+            time.sleep(300)
+            session = get_session()
+            game_data = get_game_data(i, session)
+
+        data.append(game_data)
         # a very lame imitation of user behavior
         # trying to be "polite" to server actually
         time.sleep(random.randint(100, 300) / 1000)
